@@ -114,7 +114,7 @@ h1,h2,h3{margin:0;font-weight:600}
 .gl{display:flex;gap:6px;min-width:46px;justify-content:flex-end;direction:ltr;font-weight:700;color:var(--accent);font-size:18px}.gl svg{width:24px;height:24px}.gl .off{opacity:.2}
 .gbar{height:6px;border-radius:9px;background:var(--line);margin-top:12px;overflow:hidden;direction:ltr}.gbar i{display:block;height:100%;width:100%;border-radius:9px;background:linear-gradient(90deg,#2fd0a8,#bff7a0);transform-origin:left}
 .gmeta{display:flex;justify-content:space-between;margin-top:14px;color:var(--muted);font-size:13.5px;direction:ltr}
-.gmid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:0}
+.gmid{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:0}
 .gq{font-size:58px;font-weight:600;letter-spacing:-.01em;line-height:1.15;text-align:center;direction:ltr;transition:transform .2s,color .2s}
 .gq.s{font-size:46px}.gq.xs{font-size:38px}
 .gq.ok{color:var(--ok);transform:scale(1.06)}
@@ -135,7 +135,8 @@ h1,h2,h3{margin:0;font-weight:600}
 .proc .ans{font-size:46px;font-weight:700;color:var(--accent);direction:ltr;text-align:center;line-height:1.2;margin:6px 0}
 .proc .you{text-align:center;color:var(--muted);font-size:13.5px;direction:ltr}.proc .you s{color:var(--bad)}
 .steps{display:flex;flex-direction:column;gap:6px;margin:12px 0;padding:14px 16px;border-radius:22px;background:var(--glass);border:1px solid var(--line)}
-.steps div{font-size:19px;font-weight:500;direction:ltr;text-align:start;font-variant-numeric:tabular-nums;opacity:0;transform:translateX(-10px);animation:stp .5s cubic-bezier(.2,.8,.2,1) forwards}
+.steps div{font-size:19px;font-weight:500;text-align:start;font-variant-numeric:tabular-nums;opacity:0;transform:translateX(-10px);animation:stp .5s cubic-bezier(.2,.8,.2,1) forwards}
+.steps div[dir=rtl]{transform:translateX(10px)}
 .steps div:first-child{color:var(--muted)}.steps div:last-child{color:var(--accent);font-weight:700}
 @keyframes stp{to{opacity:1;transform:none}}
 .tip{font-size:13.5px;color:var(--muted);margin:0 2px 12px}
@@ -150,13 +151,16 @@ h1,h2,h3{margin:0;font-weight:600}
 .empty{text-align:center;padding:30px 18px;display:flex;flex-direction:column;align-items:center;gap:10px}.empty p{margin:0;color:var(--muted);font-size:14px;max-width:32ch}
 @media (max-height:700px){.gq{font-size:46px}.gans{font-size:40px;height:58px;line-height:58px}.kp button{height:52px;font-size:24px}}
 @media (prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important}}
+.pentools{position:absolute;inset-inline-start:0;bottom:4px;display:flex;gap:8px;z-index:3}.pentools .rbtn{width:42px;height:42px;color:var(--text)}.pentools .rbtn svg{width:20px;height:20px}.pentools .rbtn[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}.pentools .rbtn[hidden]{display:none}
+#game .gsl{position:relative;z-index:4}
+#pen{position:absolute;left:0;right:0;top:0;width:100%;height:50%;touch-action:none;pointer-events:none;z-index:2}#pen.on{pointer-events:auto}
 </style>
 </head>
 <body>
 <div id="app">
   <div class="field" aria-hidden="true"><i></i><i></i><i></i><u></u><u></u><u></u><u></u><u></u></div>
   <main class="wrap" id="view"></main>
-  <div class="dock"><nav class="tabs glass" role="tablist"><i class="ind"></i><button role="tab" data-tab="train"></button><button role="tab" data-tab="prog"></button><button role="tab" data-tab="set"></button></nav></div>
+  <div class="dock"><nav class="tabs glass" role="tablist"><i class="ind"></i><button role="tab" data-tab="train"></button><button role="tab" data-tab="learn"></button><button role="tab" data-tab="prog"></button><button role="tab" data-tab="set"></button></nav></div>
   <div id="game" hidden></div>
   <div id="sheetWrap" hidden><div class="scrim" id="scrim"></div><div class="sheet" role="dialog" aria-modal="true" id="sheet"></div></div>
   <div id="toast" aria-live="polite"></div>
@@ -174,13 +178,15 @@ const gcd=(a,b)=>b?gcd(b,a%b):a;
 const pv=n=>{const s=String(n),o=[];for(let i=0;i<s.length;i++){const d=+s[i];if(d)o.push(d*Math.pow(10,s.length-1-i))}return o};
 const fmt=n=>Number.isInteger(n)?String(n):String(Math.round(n*1000)/1000);
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const FA=/[\u0600-\u06FF]/;
+const bd=s=>!FA.test(s)?'<bdi dir="ltr">'+esc(s)+'</bdi>':esc(s).replace(/(?:\((?=[0-9A-Za-z])|[0-9A-Za-z²³√∛])[0-9A-Za-z²³√∛×÷+−=%\/.|→()· ]*[0-9A-Za-z²³√∛%)]|[0-9A-Za-z²³√∛]/g,m=>'<bdi dir="ltr">'+m+'</bdi>');
 const hash=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};
 
 /* ---------- icons ---------- */
 const IC={
  add:'<path d="M12 4v8M8 8h8M8 18h8"/>',mul:'<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',div:'<path d="M5 12h14"/><circle cx="12" cy="6.2" r="1.3" fill="currentColor"/><circle cx="12" cy="17.8" r="1.3" fill="currentColor"/>',
  frac:'<path d="M5 12h14M9 6.5h6M9 17.5h6"/>',pow:'<path d="M4.5 18l7-9M11.5 18l-7-9"/><path d="M14.5 8c0-2 4.5-2 4.5 0s-4.5 2.6-4.5 5h4.5"/>',pct:'<path d="M18 6L6 18"/><circle cx="7.6" cy="7.6" r="2.3"/><circle cx="16.4" cy="16.4" r="2.3"/>',
- mix:'<path d="M4 7h3c4 0 5 10 9 10h4M4 17h3c1.6 0 2.7-1.6 3.6-3.3M13.4 9.3C14.3 7.9 15.2 7 17 7h3M17 4l3 3-3 3M17 14l3 3-3 3"/>',
+ dec:'<path d="M5 6v10M5 6L3.500 7.500"/><circle cx="10" cy="17" r="1.500" fill="currentColor"/><path d="M14 9c0-2.500 5-2.500 5 0s-5 5-5 8h5"/>',mix:'<path d="M4 7h3c4 0 5 10 9 10h4M4 17h3c1.6 0 2.7-1.6 3.6-3.3M13.4 9.3C14.3 7.9 15.2 7 17 7h3M17 4l3 3-3 3M17 14l3 3-3 3"/>',
  train:'<rect x="4" y="4" width="7" height="7" rx="2.2"/><rect x="13" y="4" width="7" height="7" rx="2.2"/><rect x="4" y="13" width="7" height="7" rx="2.2"/><rect x="13" y="13" width="7" height="7" rx="2.2"/>',
  prog:'<path d="M5 20V11M12 20V5M19 20v-6"/>',gear:'<circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"/>',
  flame:'<path d="M12 3c.5 3-2.5 4.6-2.5 7.7 0 1.2.6 2 1.4 2.5-.2-1.800 1-3 2.600-4.200 1.100 1.800 3 3.500 3 6.200A5 5 0 0 1 7 15.500c0-3 2-4.700 3-7C11 6 11.500 4.500 12 3z"/>',
@@ -188,8 +194,9 @@ const IC={
  heart:'<path d="M12 20s-7.500-4.600-7.500-10A4.200 4.200 0 0 1 12 7.500 4.200 4.200 0 0 1 19.500 10c0 5.400-7.500 10-7.500 10z" fill="currentColor"/>',
  bolt:'<path d="M13 3L6 13.500h5L10 21l7-10.500h-5z"/>',heartl:'<path d="M12 20s-7.500-4.600-7.500-10A4.200 4.200 0 0 1 12 7.500 4.200 4.200 0 0 1 19.500 10c0 5.400-7.500 10-7.500 10z"/>',
  inf:'<path d="M12 12c-1.800-2.600-3.200-4-5-4a4 4 0 0 0 0 8c1.800 0 3.200-1.400 5-4zm0 0c1.800 2.600 3.200 4 5 4a4 4 0 0 0 0-8c-1.800 0-3.200 1.400-5 4z"/>',
- star:'<path d="M12 3.800l2.400 5 5.400.7-4 3.800 1 5.400L12 16l-4.800 2.700 1-5.400-4-3.800 5.400-.7z"/>',redo:'<path d="M4.500 12a7.500 7.500 0 1 0 2.300-5.400M4.500 4.500v4h4"/>',bk:'<path d="M20 12H8M12 6l-6 6 6 6"/>',lock:'<rect x="5.500" y="10.500" width="13" height="9" rx="3"/><path d="M8.500 10.500V8a3.500 3.500 0 0 1 7 0v2.500"/>'
+ star:'<path d="M12 3.800l2.400 5 5.400.7-4 3.800 1 5.400L12 16l-4.800 2.700 1-5.400-4-3.800 5.400-.7z"/>',redo:'<path d="M4.500 12a7.500 7.500 0 1 0 2.300-5.400M4.500 4.500v4h4"/>',bk:'<path d="M20 12H8M12 6l-6 6 6 6"/>',learn:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.500 10.900c.600.500 1 1.200 1 2.100h5c0-.900.400-1.600 1-2.100A6 6 0 0 0 12 3z"/>',sliders:'<path d="M4 8h8M18 8h2M4 16h2M12 16h8"/><circle cx="15" cy="8" r="2.300"/><circle cx="9" cy="16" r="2.300"/>',pen:'<path d="M4 20l4-1 11-11a2.100 2.100 0 0 0-3-3L5 16z"/><path d="M14 7l3 3"/>',undo:'<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',trash:'<path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/>',lock:'<rect x="5.500" y="10.500" width="13" height="9" rx="3"/><path d="M8.500 10.500V8a3.500 3.500 0 0 1 7 0v2.500"/>'
 };
+const FLAME='<svg viewBox="0 0 24 24" aria-hidden="true" stroke-linejoin="round"><path d="M12.600 2.800c.400 3-1.900 4.500-3.300 6.500-1.300 1.900-2.200 3.500-2.200 5.700a5.500 5.500 0 0 0 11 0c0-2.200-.900-3.800-2-5.300-.5 1.300-1.300 2.100-2.100 2.400.6-2.900-.3-6.500-1.400-9.300z" fill="#ff8a3d" stroke="#ff8a3d" stroke-width="1.400"/><path d="M12 21.300a3.400 3.400 0 0 1-3.400-3.400c0-1.800 1.300-2.900 2.300-4.100.5 1 1.400 1.600 2 2.300.5-.4.900-1.100 1-1.800.6.900.8 1.900.8 2.700A3.400 3.400 0 0 1 12 21.300z" fill="#ffe08a" stroke="#ffe08a" stroke-width="1"/></svg>';
 const ic=(n,sw)=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(sw||2)+'" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+IC[n]+'</svg>';
 
 /* ---------- generators: each returns {q,a,steps,tip,kind,pair} ---------- */
@@ -213,7 +220,7 @@ function gAdd(l,r){
   return {q:a+' '+op+' '+b,a:String(res),steps:steps,tip:sub?'عدد دوم رو تکه‌تکه (صدگان، دهگان، یکان) از عدد اول کم کن.':'عدد دوم رو تکه‌تکه (صدگان، دهگان، یکان) به عدد اول اضافه کن.',kind:'add'};
 }
 function gMul(l,r){
-  const sp=[()=>[R(r,2,5),R(r,2,9)],()=>[R(r,2,9),R(r,2,9)],()=>[R(r,6,12),R(r,6,12)],()=>[R(r,12,99),R(r,3,9)],()=>[R(r,12,99),pick(r,[11,5,25,9,99])],()=>[R(r,12,99),R(r,11,19)],()=>[R(r,12,49),R(r,12,49)],()=>[R(r,101,999),R(r,3,9)],()=>[R(r,101,399),R(r,11,35)],()=>r()<.5?[R(r,51,99),R(r,51,99)]:[R(r,101,999),R(r,11,49)]][l-1]();
+  const sp=[()=>[R(r,2,6),R(r,2,9)],()=>[R(r,2,9),R(r,2,9)],()=>[R(r,6,12),R(r,6,12)],()=>[R(r,12,99),R(r,3,9)],()=>[R(r,12,99),pick(r,[11,5,25,9,99])],()=>[R(r,12,99),R(r,11,19)],()=>[R(r,12,49),R(r,12,49)],()=>[R(r,101,999),R(r,3,9)],()=>[R(r,101,399),R(r,11,35)],()=>r()<.5?[R(r,51,99),R(r,51,99)]:[R(r,101,999),R(r,11,49)]][l-1]();
   let a=sp[0],b=sp[1];if(l<=3&&r()<.5){const t=a;a=b;b=t}
   const o={q:a+' × '+b,a:String(a*b),steps:mulLines(a,b),tip:'عدد رو به تکه‌های ساده بشکن، جدا ضرب کن و بعد جمع بزن.',kind:'mul'};
   if(a<=12&&b<=12)o.pair=[Math.min(a,b),Math.max(a,b)];
@@ -242,7 +249,7 @@ function sqSteps(n){
   return [n+'² = ('+m+' '+sg+' '+ad+')²','= '+m+'² '+sg+' 2×'+m+'×'+ad+' + '+ad+'²','= '+m*m+' '+sg+' '+(2*m*ad)+' + '+ad*ad,'= '+n*n];
 }
 function gPow(l,r){
-  const ty=[['sq'],['sq','sq','sqrt'],['sq','sqrt'],['sq','cube','sqrt'],['sq','cube','sqrt'],['cube','sqrt','sq'],['sq','sq5'],['sq','cbrt','sq'],['sq','cbrt'],['sq','cube','cbrt','sqrt']][l-1],t=pick(r,ty);
+  const ty=[['sq','sqrt'],['sq','sq','sqrt'],['sq','sqrt'],['sq','cube','sqrt'],['sq','cube','sqrt'],['cube','sqrt','sq'],['sq','sq5'],['sq','cbrt','sq'],['sq','cbrt'],['sq','cube','cbrt','sqrt']][l-1],t=pick(r,ty);
   const rg={sq:[[2,10],[2,12],[11,20],[2,20],[11,30],[11,30],[21,50],[31,70],[51,99],[11,99]][l-1],cube:[[2,5],[2,5],[2,5],[2,5],[2,6],[2,10],[2,10],[2,10],[2,12],[2,12]][l-1],sqrt:[[2,10],[2,10],[2,20],[2,25],[11,25],[11,30],[11,35],[11,40],[11,45],[12,50]][l-1],cbrt:[[2,5],[2,5],[2,6],[2,8],[2,9],[2,10],[2,10],[2,10],[2,12],[2,12]][l-1]};
   if(t==='sq5'){const a=R(r,1,9),n=a*10+5;return {q:n+'²',a:String(n*n),steps:sqSteps(n),tip:'مربع عددهای ۵تایی: رقم دهگان × (دهگان+۱) و بعد ۲۵.',kind:'pow'}}
   const g=rg[t],n=R(r,g[0],g[1]);
@@ -263,16 +270,167 @@ function gPct(l,r){
   if(steps[steps.length-1]!==String(res)&&steps[steps.length-1].slice(-String(res).length-3)!==' = '+res)steps.push(String(res));
   return {q:p+'% of '+N,a:String(res),steps:steps,tip:'اول ۱۰٪ یا ۱٪ رو پیدا کن و بعد با ضرب یا جمع به جواب برس.',kind:'pct'};
 }
-const GEN={add:gAdd,mul:gMul,div:gDiv,frac:gFrac,pow:gPow,pct:gPct};
-const MIXED=['add','mul','div','frac','pow','pct'];
+/* ---------- decimals ---------- */
+const fd=(n,dp)=>{let s=(n/Math.pow(10,dp)).toFixed(dp);if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\.$/,'');return s};
+function gDec(l,r){
+  const T=[['add','sub'],['add','sub','mi'],['add','sub','mi','di'],['mi','di','add2','sub2'],['mi','di','dd','add2','sub2'],['dd','di','dv','add2'],['dd','dv','di','mi'],['dd','dv','di','sub2'],['dd','dv','di','mi'],['dd','dv','mi','di','add2','sub2']][l-1],t=pick(r,T);
+  const mx=[40,90,120,200,300,500,700,900,990,1500][l-1];
+  if(t==='add'||t==='sub'||t==='add2'||t==='sub2'){
+    const dp=t.length>3?2:1,sub=t[0]==='s';let A=R(r,15,mx*(dp===2?5:1)),B=R(r,5,mx*(dp===2?5:1));if(sub){if(A<B){const x=A;A=B;B=x}if(A===B)A++}
+    const res=sub?A-B:A+B,op=sub?'−':'+',q=fd(A,dp)+' '+op+' '+fd(B,dp);
+    return {q:q,a:fd(res,dp),steps:[q,'ممیز رو نادیده بگیر و عددهای '+dp+' رقم اعشاری رو هم‌رقم کن: '+A+' '+op+' '+B+' = '+res,'ممیز رو '+dp+' رقم از راست بذار: '+fd(res,dp)],tip:'ممیزها رو زیر هم بیار و مثل عددهای صحیح جمع یا تفریق کن.',kind:'dec',c0:'dec'};
+  }
+  if(t==='mi'){
+    const X=R(r,12,l<4?60:l<7?150:990),y=R(r,2,l<4?9:l<7?12:19),P=X*y,q=fd(X,1)+' × '+y;
+    return {q:q,a:fd(P,1),steps:[q,'ممیز رو بردار: '+X+' × '+y+' = '+P,'یک رقم اعشار داشتیم، پس: '+fd(P,1)],tip:'ممیز رو نادیده بگیر، ضرب کن و به تعداد رقم‌های اعشار برگردونش.',kind:'dec',c0:'dec'};
+  }
+  if(t==='dd'){
+    const hi=l<6?9:l<9?30:99,X=R(r,2,hi),Y=R(r,2,hi),P=X*Y,q=fd(X,1)+' × '+fd(Y,1);
+    return {q:q,a:fd(P,2),steps:[q,'ممیزها رو بردار: '+X+' × '+Y+' = '+P,'مجموع رقم‌های اعشار: 1 + 1 = 2','دو رقم از راست جدا کن: '+fd(P,2)],tip:'تعداد رقم‌های اعشار دو عدد رو جمع کن و همون‌قدر از راست ممیز بذار.',kind:'dec',c0:'dec'};
+  }
+  if(t==='di'){
+    const dp=l<5?1:2,k=R(r,2,l<5?9:l<8?15:25),Q=R(r,3,l<5?60:l<8?150:600),N=Q*k,q=fd(N,dp)+' ÷ '+k;
+    return {q:q,a:fd(Q,dp),steps:[q,'ممیز رو بردار: '+N+' ÷ '+k+' = '+Q,'ممیز رو '+dp+' رقم از راست بذار: '+fd(Q,dp)],tip:'اول بدون ممیز تقسیم کن و بعد ممیز رو بذار.',kind:'dec',c0:'dec'};
+  }
+  const v=R(r,2,l<8?9:25),Q=R(r,2,l<8?30:99),N=Q*v,q=fd(N,1)+' ÷ '+fd(v,1);
+  return {q:q,a:String(Q),steps:[q,'هر دو عدد رو در 10 ضرب کن تا ممیز مقسوم‌علیه از بین بره: '+N+' ÷ '+v,N+' ÷ '+v+' = '+Q],tip:'مقسوم و مقسوم‌علیه رو در یه عدد ضرب کن تا مقسوم‌علیه صحیح بشه.',kind:'dec',c0:'dec'};
+}
+const GEN={add:gAdd,mul:gMul,div:gDiv,frac:gFrac,pow:gPow,pct:gPct,dec:gDec};
+const MIXED=['add','mul','div','frac','pow','pct','dec'];
 function genQ(cat,l,r){const c=cat==='mix'?pick(r,MIXED):cat;const o=GEN[c](l,r);o.cat=cat==='mix'?'mix':c;o.c0=c;return o}
 
+/* ---------- techniques ---------- */
+const tq=(q,a,steps,tip,c0,kind)=>({q:q,a:String(a),steps:steps,tip:tip,kind:kind||'tech',c0:c0||'mul',cat:c0||'mul'});
+const TECH=[
+{id:'x11',b:'×11',n:'ضرب در 11',lv:'مبتدی',seed:3,
+ why:'ضرب در 11 یعنی «×10 + خود عدد». نتیجه‌اش رقم‌های عدد رو با مجموعشون وسطشون نگه می‌داره.',
+ rule:['عدد دو رقمی رو باز کن: مثلاً 3 و 4','مجموع دو رقم رو وسطشون بذار: 3 | 7 | 4','اگه مجموع دو رقمی شد، 1 رو به رقم اول اضافه کن'],
+ g:r=>{const n=R(r,12,98),a=Math.floor(n/10),b=n%10,s=a+b,st=[n+' × 11','رقم اول و آخر: '+a+' و '+b,'وسط: '+a+' + '+b+' = '+s];st.push(s<10?a+' | '+s+' | '+b+' → '+n*11:'1 رو بده به رقم اول: '+(a+1)+' | '+(s-10)+' | '+b+' → '+n*11);return tq(n+' × 11',n*11,st,'رقم‌ها رو از هم جدا کن و مجموعشون رو وسط بذار.')}},
+{id:'x5',b:'×5',n:'ضرب در 5',lv:'مبتدی',seed:5,
+ why:'5 نصفِ 10 است. پس به‌جای ضرب در 5، عدد رو ×10 کن و نصفش کن (یا اول نصف کن و بعد ×10).',
+ rule:['عدد رو در 10 ضرب کن (یه صفر بذار ته عدد)','حاصل رو نصف کن'],
+ g:r=>{const n=R(r,12,198);return tq(n+' × 5',n*5,[n+' × 5',n+' × 10 = '+n*10,n*10+' ÷ 2 = '+n*5],'×10 و بعد نصف کردن از ضرب مستقیم در 5 راحت‌تره.')}},
+{id:'x9',b:'×9',n:'ضرب در 9 و 99',lv:'مبتدی',seed:2,
+ why:'9 یعنی «10 − 1» و 99 یعنی «100 − 1». پس عدد رو ×10 (یا ×100) کن و خودش رو کم کن.',
+ rule:['برای ×9: عدد رو ×10 کن، بعد یک بار از خودش کم کن','برای ×99: عدد رو ×100 کن، بعد یک بار از خودش کم کن'],
+ g:r=>{const n=R(r,12,99),k=r()<.5?9:99,p=k===9?10:100;return tq(n+' × '+k,n*k,[n+' × '+k,n+' × '+p+' − '+n,n*p+' − '+n+' = '+n*k],'ضرب در عددی نزدیک به توان 10، با «توان 10 منهای کم‌مقدار» ساده می‌شه.')}},
+{id:'x25',b:'×25',n:'ضرب در 25',lv:'مبتدی',seed:9,
+ why:'25 یک‌چهارم 100 است. پس عدد رو ×100 کن و تقسیم بر 4 کن (دو بار نصف).',
+ rule:['عدد رو ×100 کن (دو صفر ته عدد)','حاصل رو بر 4 تقسیم کن، یعنی دو بار نصف کن'],
+ g:r=>{const n=R(r,12,96);return tq(n+' × 25',n*25,[n+' × 25',n+' × 100 = '+n*100,n*100+' ÷ 4 = '+n*25],'25 = 100 ÷ 4.')}},
+{id:'x15',b:'×15',n:'ضرب در 15',lv:'مبتدی',seed:3,
+ why:'15 یعنی «10 + 5». پس عدد رو ×10 کن، نصفِ اون رو هم بساز و هر دو رو جمع کن.',
+ rule:['عدد رو ×10 کن (یه صفر ته عدد)','نصف حاصل رو حساب کن','دو عدد رو جمع کن'],
+ g:r=>{const n=R(r,12,98);return tq(n+' × 15',n*15,[n+' × 15',n+' × 10 = '+n*10,'نصفش: '+n*10+' ÷ 2 = '+n*5,n*10+' + '+n*5+' = '+n*15],'×15 = ×10 به‌علاوه‌ی نصفش.')}},
+{id:'x125',b:'×125',n:'ضرب در 125',lv:'متوسط',seed:5,
+ why:'125 یک‌هشتم 1000 است. پس عدد رو ×1000 کن و سه بار نصف کن (تقسیم بر 8).',
+ rule:['عدد رو ×1000 کن (سه صفر ته عدد)','حاصل رو سه بار نصف کن','هر نصف کردن رو جدا بنویس تا اشتباه نشه'],
+ g:r=>{const n=R(r,12,96),b=n*1000;return tq(n+' × 125',n*125,[n+' × 125',n+' × 1000 = '+b,b+' ÷ 2 = '+b/2,b/2+' ÷ 2 = '+b/4,b/4+' ÷ 2 = '+b/8],'125 = 1000 ÷ 8 یعنی سه بار نصف.')}},
+{id:'sq5',b:'5²',n:'مربع عددهای تمام‌شده به 5',lv:'مبتدی',seed:4,
+ why:'مربع هر عدد تمام‌شده به 5 همیشه آخرش 25 است و جلوش از ضرب رقم‌های قبل از 5 در عدد بعدی‌شون به دست میاد.',
+ rule:['رقم‌های قبل از 5 رو بگیر: مثلاً در 65 عدد 6','اون رو در عدد بعدی‌اش ضرب کن: 6 × 7 = 42','ته جواب 25 بچسبون: 4225'],
+ g:r=>{const n=R(r,1,14)*10+5;return tq(n+'²',n*n,sqSteps(n),'قسمت اول a × (a+1) است و آخرش 25.','pow')}},
+{id:'t10',b:'43×47',n:'دهگان یکسان، جمع یکان‌ها 10',lv:'متوسط',seed:2,
+ why:'وقتی دو عدد دهگان‌های یکسان دارن و جمع یکان‌هاشون 10 است، جواب خیلی سریع ساخته می‌شه: دو قسمت جداگانه کنار هم می‌شن.',
+ rule:['دهگان مشترک رو در عدد بعدی‌اش ضرب کن: 4 × 5 = 20','یکان‌ها رو در هم ضرب کن (دو رقمی بنویس): 3 × 7 = 21','دو قسمت رو کنار هم بذار: 2021'],
+ g:r=>{const a=R(r,1,9),b=R(r,1,9),c=10-b,x=10*a+b,y=10*a+c,L=a*(a+1),Rr=b*c;return tq(x+' × '+y,x*y,[x+' × '+y,'دهگان یکسان ('+a+') و یکان‌ها جمعشون 10 ('+b+' + '+c+')','چپ: '+a+' × '+(a+1)+' = '+L,'راست: '+b+' × '+c+' = '+Rr+(Rr<10?' → 0'+Rr:''),'کنار هم: '+L+' | '+p2(Rr)+' → '+x*y],'راست رو دو رقمی بنویس.')}},
+{id:'n100',b:'~100',n:'ضرب دو عدد نزدیک 100',lv:'متوسط',seed:6,
+ why:'ضرب دو عدد نزدیک 100 فقط به فاصله‌شون از 100 بستگی داره: سمت چپ یه تفریق ساده است و سمت راست ضرب دو فاصله.',
+ rule:['فاصله هر عدد از 100 رو بنویس: 97 → 3 و 94 → 6','سمت چپ: یکی از عددها منهای فاصله‌ی اون یکی: 97 − 6 = 91','سمت راست: ضرب فاصله‌ها: 3 × 6 = 18 (دو رقمی بنویس)','کنار هم بذار: 9118'],
+ g:r=>{const x=R(r,2,9),y=R(r,2,9),a=100-x,b=100-y,L=a-y,pr=x*y;return tq(a+' × '+b,a*b,[a+' × '+b,'فاصله از 100: '+x+' و '+y,'چپ: '+a+' − '+y+' = '+L,'راست: '+x+' × '+y+' = '+pr+(pr<10?' → 0'+pr:''),'کنار هم: '+L+' | '+p2(pr)+' → '+a*b],'اگه ضرب فاصله‌ها تک‌رقمی شد، یه صفر جلوش بذار.')}},
+{id:'cross',b:'ab×cd',n:'ضرب صلیبی دو رقمی',lv:'پیشرفته',seed:4,
+ why:'این روش برای ضرب هر دو عدد دو رقمی کار می‌کنه: یکان در یکان، ضرب‌های ضربدری جمع‌شده و دهگان در دهگان. بعد سه تا نتیجه رو با جای درست جمع می‌کنی.',
+ rule:['یکان‌ها: b × d','ضربدری: a × d + b × c','دهگان‌ها: a × c','سه نتیجه رو با جایگاهشون (صدگان، دهگان، یکان) جمع کن'],
+ g:r=>{const a=R(r,1,9),b=R(r,1,9),c=R(r,1,9),d=R(r,1,9),x=10*a+b,y=10*c+d,u=b*d,m=a*d+b*c,t=a*c;return tq(x+' × '+y,x*y,[x+' × '+y,'یکان‌ها: '+b+' × '+d+' = '+u,'ضربدری: '+a+' × '+d+' + '+b+' × '+c+' = '+m,'دهگان‌ها: '+a+' × '+c+' = '+t,t*100+' + '+m*10+' + '+u+' = '+x*y],'سه قسمت رو با جایگاه درست جمع کن.')}},
+{id:'dsq',b:'a²−b²',n:'اختلاف مربعات',lv:'متوسط',seed:8,
+ why:'وقتی دو عدد دو طرفِ یه عدد گرد قرار دارن، ضربشون برابره با مربع عدد گرد منهای مربع فاصله.',
+ rule:['وسط دو عدد رو پیدا کن: برای 47 و 53 میانگین 50 است','فاصله تا وسط: 3','مربع وسط منهای مربع فاصله: 50² − 3² = 2500 − 9 = 2491'],
+ g:r=>{const m=pick(r,[20,25,30,35,40,45,50,60,70,80,90]),d=R(r,1,6),a=m-d,b=m+d;return tq(a+' × '+b,a*b,[a+' × '+b,'وسط: '+m+'، فاصله: '+d,m+'² − '+d+'² = '+m*m+' − '+d*d,'= '+a*b],'دنبال عدد گرد وسط دو عدد باش.')}},
+{id:'sqg',b:'n²',n:'مربع با گرد کردن',lv:'متوسط',seed:6,
+ why:'برای مربع هر عدد، به نزدیک‌ترین عدد گرد برو، دو طرفش رو به‌اندازه‌ی فاصله بساز و ضرب ساده‌شون رو بزن. در آخر مربع فاصله رو اضافه کن.',
+ rule:['نزدیک‌ترین عدد گرد رو پیدا کن: برای 47 عدد 50، فاصله 3','عدد اون طرفش رو بساز: 47 − 3 = 44','ضرب بزن: 50 × 44 = 2200','مربع فاصله رو اضافه کن: 2200 + 9 = 2209'],
+ g:r=>{let n;do{n=R(r,13,97)}while(n%10===0);const m=Math.round(n/10)*10,d=Math.abs(n-m),o=2*n-m,P=m*o;return tq(n+'²',n*n,[n+'²','عدد گرد: '+m+'، فاصله: '+d,'اون طرفش: '+o,m+' × '+o+' = '+P,P+' + '+d+'² = '+P+' + '+d*d+' = '+n*n],'نزدیک‌ترین عدد گرد رو انتخاب کن.','pow')}},
+{id:'hd',b:'½×2',n:'نصف و دو برابر',lv:'متوسط',seed:12,
+ why:'اگه یکی از عددها رو نصف و اون یکی رو دو برابر کنی حاصل‌ضرب عوض نمی‌شه، ولی ضرب ساده‌تر می‌شه.',
+ rule:['عدد زوج رو نصف کن','عدد دوم رو دو برابر کن','تا وقتی ضرب ساده بشه تکرار کن: 14 × 35 → 7 × 70 = 490'],
+ g:r=>{const a=2*R(r,6,34),b=5*R(r,3,11);return tq(a+' × '+b,a*b,[a+' × '+b,'نصف: '+a+' ÷ 2 = '+a/2+'، دو برابر: '+b+' × 2 = '+2*b,a/2+' × '+2*b+' = '+a*b],'اون عدد زوج رو نصف و اون یکی رو دو برابر کن.')}},
+{id:'rnd',b:'±',n:'گرد کردن و جبران',lv:'مبتدی',seed:21,
+ why:'عددهای نزدیک به گرد رو اول گرد کن، محاسبه‌ی راحت رو انجام بده و در آخر اختلاف رو جبران کن.',
+ rule:['عدد نزدیک به گرد رو پیدا کن: 296 = 300 − 4','با عدد گرد جمع یا تفریق کن','اختلاف کوچیک رو جبران کن'],
+ g:r=>{const c=R(r,2,9)*100,e=R(r,1,9),b=c-e;if(r()<.5){const a=R(r,120,899),res=a+b;return tq(a+' + '+b,res,[a+' + '+b,b+' = '+c+' − '+e,a+' + '+c+' = '+(a+c),(a+c)+' − '+e+' = '+res],'اول با عدد گرد جمع کن، بعد جبران کن.','add')}const a=R(r,c+50,c+500),res=a-b;return tq(a+' − '+b,res,[a+' − '+b,b+' = '+c+' − '+e,a+' − '+c+' = '+(a-c),(a-c)+' + '+e+' = '+res],'تفریق عدد گرد آسونه؛ بعد اختلاف رو اضافه کن.','add')}},
+{id:'comp',b:'1000−',n:'تفریق از 100 و 1000',lv:'مبتدی',seed:8,
+ why:'برای کم کردن یه عدد از 100 یا 1000، هر رقم رو از 9 کم کن و فقط رقم آخر رو از 10. بدون قرض گرفتن.',
+ rule:['همه‌ی رقم‌ها به‌جز آخری رو از 9 کم کن','رقم آخر رو از 10 کم کن','نتیجه‌ها رو کنار هم بنویس'],
+ g:r=>{let n,k;if(r()<.4){k=2;do{n=R(r,11,99)}while(n%10===0)}else{k=3;do{n=R(r,101,999)}while(n%10===0)}const ds=String(n).split('').map(Number),pw=Math.pow(10,k),res=pw-n,parts=ds.map((x,i)=>i<ds.length-1?(9-x):(10-x));return tq(pw+' − '+n,res,[pw+' − '+n,'رقم‌ها از 9 (آخری از 10): '+ds.map((x,i)=>(i<ds.length-1?9:10)+' − '+x).join(' ، '),'کنار هم: '+parts.join('')],'رقم آخر رو از 10 و بقیه رو از 9 کم کن.','add')}},
+{id:'pcu',b:'±%',n:'افزایش و کاهش درصدی',lv:'متوسط',seed:12,
+ why:'برای زیاد یا کم کردن درصد، اول خود درصد رو حساب کن (با 10٪ و 5٪ و 1٪) و بعد اون رو به عدد اضافه یا ازش کم کن.',
+ rule:['درصد مورد نظر رو از عدد پیدا کن','برای افزایش جمع کن و برای کاهش کم کن','مثال: 80 + 25٪ → 25٪ از 80 = 20 → 100'],
+ g:r=>{const N=20*R(r,3,40),p=pick(r,[5,10,15,20,25,30,40,50]),up=r()<.5,x=N*p/100,res=up?N+x:N-x,op=up?'+':'−',q=N+' '+op+' '+p+'%';return tq(q,res,[q,p+'% of '+N+' = '+x,N+' '+op+' '+x+' = '+res],'اول خود درصد رو حساب کن، بعد جمع یا کم کن.','pct')}},
+{id:'d5',b:'÷5',n:'تقسیم بر 5 و 25',lv:'مبتدی',seed:30,
+ why:'تقسیم بر 5 همون «×2 و ÷10» است و تقسیم بر 25 همون «×4 و ÷100».',
+ rule:['برای ÷5: عدد رو دو برابر کن، بعد یه صفر حذف کن','برای ÷25: عدد رو ×4 کن، بعد دو صفر حذف کن'],
+ g:r=>{if(r()<.5){const k=R(r,12,198),n=5*k;return tq(n+' ÷ 5',k,[n+' ÷ 5',n+' × 2 = '+n*2,n*2+' ÷ 10 = '+k],'×2 و بعد ÷10.','div')}const k=R(r,4,80),n=25*k;return tq(n+' ÷ 25',k,[n+' ÷ 25',n+' × 4 = '+n*4,n*4+' ÷ 100 = '+k],'×4 و بعد ÷100.','div')}},
+{id:'pf',b:'%',n:'جابه‌جایی درصد',lv:'متوسط',seed:41,
+ why:'x٪ از y با y٪ از x برابره. اغلب یکی‌شون خیلی راحت‌تره، مثلاً 50٪ از عدد یعنی نصفش.',
+ rule:['جای دو عدد رو عوض کن: 8٪ از 50 = 50٪ از 8','حالا ساده‌تر حساب کن: نصف 8 = 4'],
+ g:r=>{const N=pick(r,[50,25,20,10]),m={50:2,25:4,20:5,10:10}[N],p=m*R(r,Math.ceil(6/m),Math.floor(96/m)),res=N*p/100,op={50:'نصف',25:'یک‌چهارم',20:'یک‌پنجم',10:'یک‌دهم'}[N];return tq(p+'% of '+N,res,[p+'% of '+N,'جابه‌جا کن: '+N+'% of '+p,op+' '+p+' = '+res],'درصد رو جابه‌جا کن تا عدد گرد بشه.','pct')}},
+{id:'dm',b:'0.1×',n:'ضرب اعشار',lv:'متوسط',seed:14,
+ why:'اعشار رو مثل عدد صحیح ضرب کن و آخر سر ممیز رو برگردون؛ ممیز فقط تعداد رقم‌های اعشار رو می‌خواد.',
+ rule:['ممیزها رو نادیده بگیر: 1.2 × 0.4 → 12 × 4 = 48','رقم‌های اعشار هر دو عدد رو جمع کن: 1 + 1 = 2','از راست دو رقم جدا کن: 0.48'],
+ g:r=>{const X=R(r,12,59),Y=R(r,2,9),P=X*Y,q=fd(X,1)+' × '+fd(Y,1);return tq(q,fd(P,2),[q,'ممیزها رو بردار: '+X+' × '+Y+' = '+P,'رقم‌های اعشار: 1 + 1 = 2','دو رقم از راست جدا کن: '+fd(P,2)],'ممیز رو نادیده بگیر و آخر سر دوباره بذار.','dec','dec')}},
+{id:'dd2',b:'÷0.1',n:'تقسیم بر اعشار',lv:'متوسط',seed:17,
+ why:'اگه مقسوم و مقسوم‌علیه رو در یه عدد ضرب کنی خارج‌قسمت عوض نمی‌شه. پس هر دو رو ×10 کن تا مقسوم‌علیه صحیح بشه.',
+ rule:['هر دو عدد رو در 10 ضرب کن: 3.6 ÷ 0.4 → 36 ÷ 4','مثل عددهای صحیح تقسیم کن: 9'],
+ g:r=>{const v=R(r,2,9),Q=R(r,2,40),N=Q*v,q=fd(N,1)+' ÷ '+fd(v,1);return tq(q,Q,[q,'هر دو رو ×10: '+N+' ÷ '+v,N+' ÷ '+v+' = '+Q],'ممیز مقسوم‌علیه رو با ضرب در 10 از بین ببر.','dec','dec')}},
+{id:'da',b:'+0.0',n:'جمع و تفریق اعشار',lv:'مبتدی',seed:22,
+ why:'ممیزها رو زیر هم بیار و جاهای خالی رو با صفر پر کن. بعد مثل عدد صحیح جمع یا تفریق کن و ممیز رو سر جاش بذار.',
+ rule:['تعداد رقم‌های اعشار دو عدد رو برابر کن: 3.4 → 3.40','ممیز رو نادیده بگیر و عددها رو جمع یا تفریق کن','ممیز رو دو رقم از راست بذار'],
+ g:r=>{const sub=r()<.5;let A=R(r,12,99)*10,B=R(r,11,99);if(B%10===0)B++;if(sub&&A<B){const t=A;A=B;B=t}const op=sub?'−':'+',res=sub?A-B:A+B,q=fd(A,2)+' '+op+' '+fd(B,2),pd=n=>(n/100).toFixed(2);return tq(q,fd(res,2),[q,'هم‌رقم کن: '+pd(A)+' '+op+' '+pd(B),'بدون ممیز: '+A+' '+op+' '+B+' = '+res,'دو رقم از راست جدا کن: '+fd(res,2)],'ممیزها رو زیر هم بیار و با صفر هم‌رقم کن.','dec','dec')}},
+{id:'ds',b:'×10',n:'جابه‌جایی ممیز',lv:'مبتدی',seed:5,
+ why:'ضرب در 10، 100 و 1000 ممیز رو به راست می‌بره و تقسیم بر اون‌ها (یا ضرب در 0.1، 0.01 و 0.001) ممیز رو به چپ. لازم نیست محاسبه‌ای بکنی.',
+ rule:['ضرب در 10 به توان k: ممیز k رقم به راست','تقسیم بر 10 به توان k: ممیز k رقم به چپ','ضرب در 0.1 یا 0.01 یا 0.001 مثل تقسیم بر 10 یا 100 یا 1000 است'],
+ g:r=>{const d=R(r,0,2);let N=R(r,3,999);if(N%10===0)N++;const k=R(r,1,3),ty=R(r,0,2),v=fd(N,d);let q,res,line;
+  if(ty===0){q=v+' × '+Math.pow(10,k);res=d>=k?fd(N,d-k):String(N*Math.pow(10,k-d));line='ضرب در '+Math.pow(10,k)+': ممیز '+k+' رقم به راست'}
+  else if(ty===1){q=v+' ÷ '+Math.pow(10,k);res=fd(N,d+k);line='تقسیم بر '+Math.pow(10,k)+': ممیز '+k+' رقم به چپ'}
+  else{q=v+' × '+fd(1,k);res=fd(N,d+k);line=fd(1,k)+' یعنی ÷ '+Math.pow(10,k)+': ممیز '+k+' رقم به چپ'}
+  return tq(q,res,[q,line,res],'فقط ممیز رو جابه‌جا کن؛ اگه جا کم اومد صفر اضافه کن.','dec','dec')}},
+{id:'df',b:'1/8',n:'کسرهای معروف به اعشار',lv:'متوسط',seed:13,
+ why:'چند تا کسر پرکاربرد رو که حفظ کنی، همه‌ی کسرهای هم‌خانواده‌شون ساده می‌شن: 1/8 = 0.125 پس 3/8 = 3 × 0.125.',
+ rule:['حفظ کن: 1/2 = 0.5 ، 1/4 = 0.25 ، 1/5 = 0.2','حفظ کن: 1/8 = 0.125 ، 1/20 = 0.05 ، 1/25 = 0.04','برای کسرهای دیگه صورت رو در اون عدد پایه ضرب کن'],
+ g:r=>{const U={2:500,4:250,5:200,8:125,20:50,25:40},ds=[4,5,8,8,20,25],den=pick(r,ds),n=R(r,1,den-1),u=U[den],q=n+'/'+den;return tq(q,fd(n*u,3),[q,'1/'+den+' = '+fd(u,3),n+' × '+fd(u,3)+' = '+fd(n*u,3)],'کسرهای پایه‌ی 1/4 ، 1/5 ، 1/8 ، 1/20 و 1/25 رو حفظ کن.','dec','dec')}},
+{id:'dq',b:'×.25',n:'ضرب در 0.5 ، 0.25 و 0.125',lv:'متوسط',seed:11,
+ why:'0.5 یعنی نصف، 0.25 یعنی یک‌چهارم (دو بار نصف) و 0.125 یعنی یک‌هشتم (سه بار نصف). نصف کردن از ضرب ساده‌تره.',
+ rule:['ضرب در 0.5: عدد رو یک بار نصف کن','ضرب در 0.25: عدد رو دو بار نصف کن','ضرب در 0.125: عدد رو سه بار نصف کن'],
+ g:r=>{const t=pick(r,[1,2,3]),N=t===1?R(r,11,199):t===2?2*R(r,6,60):4*R(r,3,50),f=t===1?'0.5':t===2?'0.25':'0.125',u=t===1?500:t===2?250:125,q=N+' × '+f,st=[q];
+  for(let i=1;i<=t;i++){st.push((i===1?N:fd(N*(1000/Math.pow(2,i-1)),3))+' ÷ 2 = '+fd(N*(1000/Math.pow(2,i)),3))}
+  return tq(q,fd(N*u,3),st,'به‌جای ضرب، عدد رو نصف کن (چند بار).','dec','dec')}},
+{id:'dp',b:'%.',n:'اعشار و درصد',lv:'مبتدی',seed:13,
+ why:'درصد یعنی «تقسیم بر 100». پس برای تبدیل اعشار به درصد ممیز رو دو رقم به راست ببر و برای برعکسش دو رقم به چپ.',
+ rule:['اعشار به درصد: دو رقم به راست (0.35 → 35٪)','درصد به اعشار: دو رقم به چپ (6٪ → 0.06)'],
+ g:r=>{if(r()<.5){const n=R(r,1,99),v=fd(n,2),q=v+' → %';return tq(q,String(n),[q,'ضرب در 100: ممیز دو رقم به راست',String(n)],'اعشار رو در 100 ضرب کن.','dec','dec')}const n=R(r,1,99),q=n+'% → dec';return tq(q,fd(n,2),[q,'تقسیم بر 100: ممیز دو رقم به چپ',fd(n,2)],'درصد رو بر 100 تقسیم کن.','dec','dec')}},
+{id:'dvr',b:'3|n',n:'بخش‌پذیری (1 = بله ، 0 = نه)',lv:'پیشرفته',seed:23,
+ why:'با چند قاعده‌ی ساده بدون تقسیم می‌فهمی یه عدد بر 3، 4، 6، 8، 9 یا 11 بخش‌پذیره یا نه. این برای ساده کردن کسر خیلی به‌دردبخوره.',
+ rule:['3 و 9: جمع رقم‌ها بر 3 یا 9 بخش‌پذیر باشه','4: دو رقم آخر بر 4 بخش‌پذیر باشه','8: سه رقم آخر بر 8 بخش‌پذیر باشه','6: عدد زوج باشه و جمع رقم‌ها بر 3 بخش‌پذیر باشه','11: جمع ارقام جای فرد منهای جمع ارقام جای زوج بر 11 بخش‌پذیر باشه'],
+ g:r=>{const d=pick(r,[3,4,6,8,9,11]);let n;if(r()<.5)n=d*R(r,Math.ceil(120/d),Math.floor(9999/d));else n=R(r,120,9999);const ds=String(n).split('').map(Number),ok=n%d===0,yes=ok?'بخش‌پذیره → 1':'بخش‌پذیر نیست → 0',st=[d+' | '+n];
+  if(d===3||d===9){const sm=ds.reduce((a,b)=>a+b,0);st.push('جمع ارقام: '+ds.join(' + ')+' = '+sm);st.push(sm+(sm%d===0?' بر ':' بر ')+d+' '+yes)}
+  else if(d===4){const l=n%100;st.push('دو رقم آخر: '+l);st.push(l+' بر 4 '+yes)}
+  else if(d===8){const l=n%1000;st.push('سه رقم آخر: '+l);st.push(l+' بر 8 '+yes)}
+  else if(d===6){const sm=ds.reduce((a,b)=>a+b,0);st.push('رقم آخر '+ds[ds.length-1]+(ds[ds.length-1]%2===0?' زوجه':' فرده'));st.push('جمع ارقام: '+sm+(sm%3===0?' بر 3 بخش‌پذیره':' بر 3 بخش‌پذیر نیست'));st.push('نتیجه: '+yes)}
+  else{const rv=ds.slice().reverse();let t=0;rv.forEach((x,i)=>t+=i%2===0?x:-x);st.push('از راست یکی در میون: '+rv.map((x,i)=>(i===0?'':(i%2===0?'+ ':'− '))+x).join(' ')+' = '+t);st.push(t+' بر 11 '+yes)}
+  return tq(d+' | '+n,ok?1:0,st,'قاعده‌ی هر عدد رو یاد بگیر و مستقیم اعمال کن.','div')}},
+{id:'m9',b:'mod 9',n:'باقی‌مانده بر 9 (جمع ارقام)',lv:'پیشرفته',seed:50,
+ why:'باقی‌مانده‌ی هر عدد بر 9 با باقی‌مانده‌ی مجموع رقم‌هاش یکیه. این کار برای چک کردن جواب ضرب و جمع هم خیلی به‌دردبخوره.',
+ rule:['رقم‌های عدد رو جمع کن','اگه هنوز دو رقمیه، دوباره جمع کن','نتیجه 9 یعنی باقی‌مانده 0'],
+ g:r=>{const n=R(r,1000,99999);let s=String(n).split('').map(Number).reduce((a,b)=>a+b,0);const st=[n+' mod 9',String(n).split('').join(' + ')+' = '+s];while(s>9){const t=String(s).split('').map(Number).reduce((a,b)=>a+b,0);st.push(String(s).split('').join(' + ')+' = '+t);s=t}if(s===9)st.push('9 یعنی باقی‌مانده 0');return tq(n+' mod 9',n%9,st,'جمع ارقام رو اون‌قدر ادامه بده تا تک‌رقمی بشه.','div')}}
+];
+const techOf=id=>TECH.find(t=>t.id===id);
+
 /* ---------- data ---------- */
-const CATS=[{id:'add',n:'جمع و تفریق'},{id:'mul',n:'ضرب'},{id:'div',n:'تقسیم'},{id:'frac',n:'ساده کردن کسر'},{id:'pow',n:'توان و جذر'},{id:'pct',n:'درصد'},{id:'mix',n:'ترکیبی'}];
+const CATS=[{id:'add',n:'جمع و تفریق'},{id:'mul',n:'ضرب'},{id:'div',n:'تقسیم'},{id:'frac',n:'ساده کردن کسر'},{id:'pow',n:'توان و جذر'},{id:'pct',n:'درصد'},{id:'dec',n:'اعشار'},{id:'mix',n:'ترکیبی'}];
 const catOf=id=>CATS.find(c=>c.id===id)||{id:id,n:id};
 const MODES=[{id:'speed',n:'سرعتی',d:'60 ثانیه وقت داری؛ هر چقدر می‌تونی حل کن.',ic:'bolt'},{id:'surv',n:'بقا',d:'3 جون داری. غلط یا دیر جواب دادن یه جون می‌بره.',ic:'heartl'},{id:'free',n:'بدون محدودیت',d:'بدون فشار. فقط زمان کل نشون داده می‌شه.',ic:'inf'}];
 const KEY='behind-v1';
-const def=()=>({v:1,unl:{},best:{},sess:[],pairs:{},miss:[],xp:0,day:{last:'',streak:0,max:0},daily:{},act:{},opts:{hap:true,snd:true,all:true},last:null,tot:{n:0,c:0,ms:0},cat:{}});
+const def=()=>({v:1,unl:{},best:{},sess:[],pairs:{},miss:[],xp:0,day:{last:'',streak:0,max:0},daily:{},act:{},opts:{hap:true,snd:true,all:true,penClear:true},last:null,tot:{n:0,c:0,ms:0},cat:{},tech:{},recent:{},cust:{cats:['mul','div'],lvl:3,count:20,tpq:0}});
 function load(){try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.v===1)return Object.assign(def(),o,{opts:Object.assign(def().opts,o.opts||{})})}catch(e){}return def()}
 let S=load();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -300,26 +458,65 @@ const mmss=ms=>{const s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+
 const sec=ms=>(ms/1000).toFixed(1);
 
 /* ---------- views ---------- */
-const TABS={train:['تمرین','train'],prog:['پیشرفت','prog'],set:['تنظیمات','gear']};
+const TABS={train:['تمرین','train'],learn:['آموزش','learn'],prog:['پیشرفت','prog'],set:['تنظیمات','gear']};
 function placeInd(mv){const s=$('.tabs [aria-selected="true"]'),i=$('.tabs .ind');if(!s||!i)return;if(!placeInd.done){i.style.transition='none'}i.style.left=s.offsetLeft+'px';i.style.width=s.offsetWidth+'px';if(!placeInd.done){void i.offsetWidth;i.style.transition='';placeInd.done=1}else if(mv){i.classList.remove('mv');void i.offsetWidth;i.classList.add('mv')}}
 addEventListener('resize',()=>placeInd(false));
 let lastTab=null;
 function render(anim){
   const v=$('#view');v.className='wrap'+(anim?' in':'');
-  v.innerHTML=tab==='train'?viewHome():tab==='prog'?viewProg():viewSet();
+  v.innerHTML=tab==='train'?viewHome():tab==='learn'?viewLearn():tab==='prog'?viewProg():viewSet();
   if(anim)[...v.children].forEach((el,i)=>el.style.setProperty('--i',i));
   $$('.tabs button').forEach(b=>{const k=b.dataset.tab;b.setAttribute('aria-selected',k===tab);b.innerHTML=ic(TABS[k][1])+TABS[k][0]});
   placeInd(lastTab!==null&&lastTab!==tab);lastTab=tab;
 }
 const header=(title,sub)=>'<header class="top"><div>'+title+(sub?'<div class="sub">'+sub+'</div>':'')+'</div></header>';
+function smartPlan(){
+  const rows=CATS.filter(c=>c.id!=='mix').map(c=>{const s=S.cat[c.id];return s&&s.n>=5?{id:c.id,acc:s.c/s.n,t:s.ms/s.n/1000}:null}).filter(Boolean);
+  if(rows.length<2)return {cats:['mul','div'],lvl:3,why:'هنوز داده‌ی کافی نداری؛ از ضرب و تقسیم شروع می‌کنیم'};
+  rows.forEach(r=>r.sc=(1-r.acc)*100+r.t*3);rows.sort((a,b)=>b.sc-a.sc);
+  const top=rows[0],ids=[top.id,rows[1].id];let lvl=3;
+  const ss=S.sess.filter(x=>x.cat===top.id).slice(-3);
+  if(ss.length){const l=ss[ss.length-1].lvl,acc=ss.reduce((a,x)=>a+(x.n?x.c/x.n:0),0)/ss.length;lvl=acc>=.9?Math.min(10,l+1):acc<.6?Math.max(1,l-1):l}
+  return {cats:ids,lvl:lvl,why:'ضعیف‌ترین: '+catOf(top.id).n+' (دقت '+Math.round(top.acc*100)+'٪، '+top.t.toFixed(1)+' ثانیه برای هر سؤال)'};
+}
+function startSmart(){const p=smartPlan();startGame({cat:'mix',mode:'custom',smart:true,opts:{cats:p.cats,lvl:p.lvl,count:20,tpq:0}})}
+function customSheet(){
+  const C=Object.assign({cats:['mul'],lvl:3,count:20,tpq:0},S.cust||{});let cats=C.cats.slice(),lvl=C.lvl,count=C.count,tpq=C.tpq;
+  const ch=(attr,v,t,on)=>'<button class="chip" '+attr+'="'+v+'" aria-pressed="'+on+'" style="justify-content:center;padding-inline:14px;height:42px">'+t+'</button>';
+  openSheet('<h2>تمرین سفارشی</h2><div class="frm"><div><p class="lbl">نوع محاسبه (چندتا انتخاب کن)</p><div style="display:flex;flex-wrap:wrap;gap:8px" id="cc">'+CATS.filter(c=>c.id!=='mix').map(c=>ch('data-c',c.id,c.n,cats.includes(c.id))).join('')+'</div></div>'+
+   '<div><p class="lbl">سطح</p><div class="lvg" id="cl">'+Array.from({length:10},(_,i)=>ch('data-l',i+1,i+1,i+1===lvl)).join('')+'</div></div>'+
+   '<div><p class="lbl">تعداد سؤال</p><div style="display:flex;gap:8px" id="cn">'+[10,20,50,0].map(n=>ch('data-n',n,n?n:'نامحدود',n===count)).join('')+'</div></div>'+
+   '<div><p class="lbl">زمان هر سؤال</p><div style="display:flex;gap:8px" id="ct">'+[0,5,10,20].map(n=>ch('data-t',n,n?n+' ثانیه':'بدون زمان',n===tpq)).join('')+'</div></div>'+
+   '<div class="acts"><button class="pill" id="cg">'+ic('bolt')+'شروع</button></div></div>',root=>{
+    root.addEventListener('click',e=>{
+      const c=e.target.closest('[data-c]');if(c){const id=c.dataset.c,i=cats.indexOf(id);if(i>=0){if(cats.length===1){toast('حداقل یه نوع باید انتخاب باشه');return}cats.splice(i,1)}else cats.push(id);c.setAttribute('aria-pressed',i<0);return}
+      const sel=(sel,att,set)=>{const b=e.target.closest('['+att+']');if(!b)return false;$$(sel+' .chip',root).forEach(x=>x.setAttribute('aria-pressed',x===b));set(+b.getAttribute(att));return true};
+      sel('#cl','data-l',v=>lvl=v)||sel('#cn','data-n',v=>count=v)||sel('#ct','data-t',v=>tpq=v);
+    });
+    $('#cg',root).addEventListener('click',()=>{S.cust={cats:cats.slice(),lvl:lvl,count:count,tpq:tpq};save();closeSheet(()=>startGame({cat:'mix',mode:'custom',opts:{cats:cats.slice(),lvl:lvl,count:count,tpq:tpq}}))});
+  });
+}
 function viewHome(){
   const td=dkey(),dn=S.daily[td],streak=(S.day.last===td||S.day.last===dkey(new Date(Date.now()-864e5)))?S.day.streak:0;
-  let h='<header class="top"><div><div class="logo">behind</div><div class="sub">محاسبه‌ی سریع، ذهنی و بی‌اشتباه</div></div><div class="stat"><span class="chip flame">'+ic('flame')+'<b>'+streak+'</b></span><span class="chip">'+ic('bolt')+'<b>'+S.xp+'</b></span></div></header>';
+  let h='<header class="top"><div><div class="logo">behind</div><div class="sub">محاسبه‌ی سریع، ذهنی و بی‌اشتباه</div></div><div class="stat"><span class="chip flame">'+FLAME+'<b>'+streak+'</b></span><span class="chip">'+ic('bolt')+'<b>'+S.xp+'</b></span></div></header>';
   h+='<section class="glass card aura daily"><div class="row" style="justify-content:space-between"><h2>چالش روزانه</h2><span class="chip">'+ic('star')+(dn?'انجام شد':'20 سؤال')+'</span></div><div class="sub">'+(dn?'بهترین نتیجه‌ی امروز: <b>'+dn.c+'/20</b> در '+mmss(dn.ms):'همه امروز همین سؤال‌ها رو دارن؛ ببین چقدر سریع حلشون می‌کنی.')+'</div><button class="pill" data-daily="1" style="align-self:flex-start">'+ic('bolt')+(dn?'یه بار دیگه':'شروع')+'</button></section>';
+  const sp=smartPlan();h+='<button class="glass quick" data-smart="1"><span class="ci">'+ic('star',2.2)+'</span><span style="flex:1"><b>تمرین هوشمند</b><small>'+bd(sp.why)+'</small></span></button><button class="glass quick" data-custom="1"><span class="ci">'+ic('sliders',2.2)+'</span><span style="flex:1"><b>تمرین سفارشی</b><small>دسته، سطح، تعداد و زمان رو خودت انتخاب کن</small></span></button>';
   if(S.last&&catOf(S.last.cat)){const l=S.last,m=MODES.find(x=>x.id===l.mode);h+='<button class="glass quick" data-quick="1"><span class="ci">'+ic('redo',2.2)+'</span><span style="flex:1"><b>ادامه‌ی تمرین</b><small>'+esc(catOf(l.cat).n)+' · سطح '+l.lvl+' · '+(m?m.n:'')+'</small></span></button>'}
   if(S.miss.length)h+='<button class="glass quick" data-review="1"><span class="ci" style="background:rgba(255,123,107,.9)">'+ic('redo',2.2)+'</span><span style="flex:1"><b>مرور اشتباه‌ها</b><small>'+S.miss.length+' سؤال که قبلاً غلط زدی</small></span></button>';
   h+='<div class="sec">نوع محاسبه</div><div class="cats">'+CATS.map(c=>'<button class="glass cat" data-cat="'+c.id+'"><span class="ci">'+ic(c.id)+'</span><b>'+c.n+'</b><span class="lv"><i style="width:'+unl(c.id)*10+'%"></i></span><small><span>سطح '+unl(c.id)+' از 10</span><span>'+((S.cat[c.id]||{n:0}).n)+' حل‌شده</span></small></button>').join('')+'</div>';
   return h;
+}
+function viewLearn(){
+  const ok=t=>((S.tech[t.id]||{}).best||0)>=9,done=TECH.filter(ok).length,nx=TECH.find(t=>!ok(t));
+  let h=header('<h1>آموزش</h1>','میان‌بُرهای محاسبه‌ی ذهنی');
+  h+='<section class="glass card aura"><div class="seg2"><h3>مسلط شدی: '+done+' از '+TECH.length+'</h3></div><div class="lv" style="margin:6px 0 4px"><i style="width:'+Math.round(done/TECH.length*100)+'%"></i></div><p class="muted" style="margin:6px 0 0;font-size:12.5px">هر روش رو یاد بگیر، 10 سؤال تمرین کن و با 9 جواب درست «مسلط» می‌شی.</p></section>';
+  if(nx)h+='<button class="glass quick" data-tech="'+nx.id+'"><span class="ci" style="font:700 13px var(--f)"><bdi dir="ltr">'+esc(nx.b)+'</bdi></span><span style="flex:1"><b>پیشنهاد بعدی: '+nx.n+'</b><small>'+nx.lv+'</small></span></button>';
+  h+='<div class="sec">همه‌ی روش‌ها</div>'+TECH.map(t=>{const s=S.tech[t.id],m=s&&s.best>=9;return '<button class="glass quick" data-tech="'+t.id+'"><span class="ci" style="font:700 13px var(--f);'+(m?'':'background:linear-gradient(145deg,rgba(77,232,194,.28),rgba(77,232,194,.08));color:var(--accent)')+'"><bdi dir="ltr">'+esc(t.b)+'</bdi></span><span style="flex:1"><b>'+t.n+'</b><small>'+t.lv+(s?' · بهترین: '+s.best+'/10':'')+'</small></span>'+(m?'<span class="chip" style="color:var(--ok)">'+ic('check')+'</span>':'')+'</button>'}).join('');
+  return h;
+}
+function lessonSheet(id){
+  const t=techOf(id);if(!t)return;const ex=t.g(mulberry(t.seed));
+  openSheet('<h2>'+esc(t.n)+'</h2><div class="frm"><p class="tip" style="margin:0">'+bd(t.why)+'</p><div><p class="lbl">روش کار</p>'+t.rule.map((r,i)=>'<div class="mrow" style="align-items:flex-start"><code style="min-width:22px">'+(i+1)+'</code><span style="flex:1">'+bd(r)+'</span></div>').join('')+'</div><div><p class="lbl">مثال</p><div class="ans" dir="ltr" style="display:block;font-size:30px;font-weight:700;margin-bottom:6px;text-align:right">'+esc(ex.q)+'</div>'+stepsHtml(ex.steps,true)+'</div><div class="acts"><button class="pill" data-practice="'+t.id+'">'+ic('bolt')+'تمرین (10 سؤال)</button></div></div>');
 }
 function lineChart(pts,opt){
   const W=320,H=150,PX=26,PT=18,PB=24,n=pts.length,iw=W-PX*2,ih=H-PT-PB;
@@ -358,7 +555,7 @@ function viewProg(){
 }
 function viewSet(){
   const tg=(k,t,s)=>'<div class="set"><span>'+t+(s?'<small>'+s+'</small>':'')+'</span><button class="tog" data-opt="'+k+'" aria-pressed="'+!!S.opts[k]+'"></button></div>';
-  return header('<h1>تنظیمات</h1>','')+'<section class="glass card">'+tg('hap','لرزش','با هر جواب یه لرزش ریز حس می‌کنی')+tg('snd','صدا','صدای کوتاه برای جواب درست و غلط')+tg('all','باز بودن همه‌ی سطح‌ها','بدون نیاز به باز کردن مرحله‌ای')+'</section>'+
+  return header('<h1>تنظیمات</h1>','')+'<section class="glass card">'+tg('hap','لرزش','با هر جواب یه لرزش ریز حس می‌کنی')+tg('snd','صدا','صدای کوتاه برای جواب درست و غلط')+tg('penClear','پاک شدن خودکار نوشته‌ها','با رفتن به سؤال بعد، نوشته‌های قلم پاک می‌شن')+tg('all','باز بودن همه‌ی سطح‌ها','بدون نیاز به باز کردن مرحله‌ای')+'</section>'+
    '<section class="glass card"><div class="set"><span>پاک کردن همه‌ی داده‌ها<small>پیشرفت، آمار و اشتباه‌ها حذف می‌شن</small></span><button class="pill danger" data-reset="1" style="height:40px">پاک کن</button></div></section>'+
    '<p class="muted" style="text-align:center;font-size:12.5px">behind · تمرین محاسبه‌ی سریع</p>';
 }
@@ -385,31 +582,69 @@ const SPEED_MS=60000,DAILY_N=20;
 function startGame(o){
   const g={cat:o.cat,mode:o.mode,lvl:o.lvl||1,qs:[],i:-1,cur:null,input:'',score:0,lives:3,run:0,qms:0,paused:true,over:false,list:null,state:'count',confirm:false,last:performance.now()};
   g.rng=Math.random;
-  if(o.mode==='daily'){const lv=Math.max(1,Math.min(10,Math.round(CATS.slice(0,6).reduce((a,c)=>a+unl(c.id),0)/6)));g.lvl=lv;g.cat='mix';const r=mulberry(hash('daily'+dkey()));g.list=Array.from({length:DAILY_N},(_,k)=>genQ('mix',lv,r))}
+  if(o.mode==='daily'){const lv=Math.max(1,Math.min(10,Math.round(CATS.slice(0,6).reduce((a,c)=>a+unl(c.id),0)/6)));g.lvl=lv;g.cat='mix';const r=mulberry(hash('daily'+dkey()));g.list=[];const sn={};let tt=0;while(g.list.length<DAILY_N&&tt<400){const q=genQ('mix',lv,r);tt++;const k=qkey(q.q);if(sn[k])continue;sn[k]=1;g.list.push(q)}}
   if(o.mode==='review'){const m=S.miss.slice().sort(()=>Math.random()-.5).slice(0,20);g.list=m.map(x=>Object.assign({},x,{fromMiss:true}));g.cat='mix';g.lvl=1}
+  if(o.mode==='tech'){const T=techOf(o.tech);g.tech=o.tech;g.cat='mix';g.lvl=1;g.list=[];let t=0;while(g.list.length<10&&t<80){const q=T.g(Math.random);t++;if(!g.list.some(x=>x.q===q.q))g.list.push(q)}}
+  if(o.mode==='custom'){let op=o.opts;if(o.smart){const p=smartPlan();op={cats:p.cats,lvl:p.lvl,count:20,tpq:0}}g.opts=op;g.smart=!!o.smart;g.pool=op.cats;g.cat=op.cats.length===1?op.cats[0]:'mix';g.lvl=op.lvl;g.total=op.count||0;g.tpq=op.tpq||0}
   G=g;
   if(['speed','surv','free'].includes(o.mode))S.last={cat:o.cat,mode:o.mode,lvl:g.lvl};
   const el=$('#game');el.hidden=false;
-  el.innerHTML='<div class="gtop"><button class="rbtn glass" id="gx" aria-label="خروج">'+ic('x')+'</button><div class="gtime" id="gt">0:00</div><div class="gl" id="gl"></div></div><div class="gbar" id="gbw"><i id="gb"></i></div><div class="gmeta"><span id="gm1"></span><span id="gm2"></span></div><div class="gmid"><div class="gq" id="gq"></div><div class="gp" id="gpr"></div><div class="gans empty" id="ga"></div><button class="gsl" id="gsl" hidden>/</button></div>'+
-   '<div class="kp" id="kp">'+[1,2,3,4,5,6,7,8,9].map(n=>'<button data-k="'+n+'">'+n+'</button>').join('')+'<button data-k="bs" aria-label="پاک">'+ic('bk')+'</button><button data-k="0">0</button><button data-k="go" class="go" aria-label="تأیید">'+ic('check',2.6)+'</button></div><div class="cd" id="cd"><div class="big" id="cdn">3</div></div>';
+  el.innerHTML='<div class="gtop"><button class="rbtn glass" id="gx" aria-label="خروج">'+ic('x')+'</button><div class="gtime" id="gt">0:00</div><div class="gl" id="gl"></div></div><div class="gbar" id="gbw"><i id="gb"></i></div><div class="gmeta"><span id="gm1"></span><span id="gm2"></span></div><div class="gmid"><div class="gq" id="gq"></div><div class="gp" id="gpr"></div><div class="gans empty" id="ga"></div><button class="gsl" id="gsl" hidden>/</button><div class="pentools"><button class="rbtn glass" id="pbt" aria-pressed="false" aria-label="قلم">'+ic('pen',2.1)+'</button><button class="rbtn glass" id="pun" aria-label="برگردوندن" hidden>'+ic('undo',2.1)+'</button><button class="rbtn glass" id="pcl" aria-label="پاک کردن" hidden>'+ic('trash',2.1)+'</button></div></div>'+
+   '<div class="kp" id="kp">'+[1,2,3,4,5,6,7,8,9].map(n=>'<button data-k="'+n+'">'+n+'</button>').join('')+'<button data-k="bs" aria-label="پاک">'+ic('bk')+'</button><button data-k="0">0</button><button data-k="go" class="go" aria-label="تأیید">'+ic('check',2.6)+'</button></div><canvas id="pen"></canvas><div class="cd" id="cd"><div class="big" id="cdn">3</div></div>';
   $('#view').parentElement.querySelector('.dock').style.visibility='hidden';
+  penInit();
   let n=3;const cd=()=>{if(!G||G!==g)return;if(n===0){$('#cd').remove();g.state='play';g.paused=false;g.last=performance.now();nextQ();return}$('#cdn').textContent=n;$('#cdn').style.animation='none';void $('#cdn').offsetWidth;$('#cdn').style.animation='';beep(520+ (3-n)*110,.12);n--;setTimeout(cd,650)};
   cd();
   if(!g.tm)g.tm=setInterval(tick,100);
   paintHud();
 }
+const PEN={strokes:[],on:false,cur:null};
+function penSize(){const c=$('#pen'),gt=$('.gtop'),kp=$('#kp');if(!c||!gt||!kp)return;const top=gt.offsetTop+gt.offsetHeight+2,bot=kp.offsetTop-2;c.style.top=top+'px';c.style.height=Math.max(100,bot-top)+'px';const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);penDraw()}
+function penDraw(){
+  const c=$('#pen');if(!c)return;const x=c.getContext('2d'),d=c.width/(c.clientWidth||1);x.clearRect(0,0,c.width,c.height);
+  x.lineCap='round';x.lineJoin='round';x.strokeStyle='rgba(120,245,215,.95)';x.shadowColor='rgba(77,232,194,.55)';x.shadowBlur=4*d;x.lineWidth=2.2*d;
+  PEN.strokes.forEach(s=>{x.beginPath();if(s.length===1){x.arc(s[0][0]*d,s[0][1]*d,1.1*d,0,7);x.fillStyle=x.strokeStyle;x.fill();return}
+    x.moveTo(s[0][0]*d,s[0][1]*d);for(let i=1;i<s.length-1;i++){const mx=(s[i][0]+s[i+1][0])/2,my=(s[i][1]+s[i+1][1])/2;x.quadraticCurveTo(s[i][0]*d,s[i][1]*d,mx*d,my*d)}
+    const l=s[s.length-1];x.lineTo(l[0]*d,l[1]*d);x.stroke()});
+}
+function penClear(){PEN.strokes=[];PEN.cur=null;penDraw()}
+function penSet(on){PEN.on=on;const c=$('#pen');if(!c)return;c.classList.toggle('on',on);$('#pbt').setAttribute('aria-pressed',on);$('#pun').hidden=!on;$('#pcl').hidden=!on;if(on)penSize()}
+function penInit(){
+  PEN.strokes=[];PEN.on=false;const c=$('#pen');if(!c)return;
+  const pt=e=>{const r=c.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
+  c.addEventListener('pointerdown',e=>{if(!PEN.on)return;e.preventDefault();try{c.setPointerCapture(e.pointerId)}catch(_){}PEN.cur=[pt(e)];PEN.strokes.push(PEN.cur);penDraw()});
+  c.addEventListener('pointermove',e=>{if(!PEN.cur)return;e.preventDefault();const p=pt(e),l=PEN.cur[PEN.cur.length-1];if(Math.hypot(p[0]-l[0],p[1]-l[1])>1.5){PEN.cur.push(p);penDraw()}});
+  const up=()=>{PEN.cur=null};c.addEventListener('pointerup',up);c.addEventListener('pointercancel',up);
+  $('#pbt').addEventListener('click',()=>penSet(!PEN.on));
+  $('#pun').addEventListener('click',()=>{PEN.strokes.pop();penDraw()});
+  $('#pcl').addEventListener('click',()=>penClear());
+  if(!PEN.rs){PEN.rs=1;addEventListener('resize',()=>penSize())}
+}
+function qkey(q){const m=/^(.+?) ([×+]) (.+)$/.exec(q);if(m){const p=[m[1],m[3]].sort();return p[0]+m[2]+p[1]}return q}
+function pickQ(g){
+  const rk=(g.pool?g.pool.join('+'):g.cat)+'|'+g.lvl,rec=S.recent[rk]||(S.recent[rk]=[]);let best=null;
+  if(Math.random()<.15){
+    const m=S.miss.filter(x=>(g.pool?g.pool.includes(x.cat):(g.cat==='mix'||x.cat===g.cat))&&(x.lvl==null||x.lvl===g.lvl)&&!(g.cur&&x.q===g.cur.q)&&rec.slice(-8).indexOf(qkey(x.q))<0);
+    if(m.length)best=Object.assign({},m[Math.floor(Math.random()*m.length)],{fromMiss:true});
+  }
+  if(!best){let bi=1e9;for(let t=0;t<40;t++){const q=genQ(g.pool?pick(g.rng,g.pool):g.cat,g.lvl,g.rng);if(g.cur&&q.q===g.cur.q)continue;const i=rec.lastIndexOf(qkey(q.q));if(i<0){best=q;break}if(i<bi){bi=i;best=q}}if(!best)best=genQ(g.pool?pick(g.rng,g.pool):g.cat,g.lvl,g.rng)}
+  const k=qkey(best.q),j=rec.indexOf(k);if(j>=0)rec.splice(j,1);rec.push(k);if(rec.length>60)rec.shift();
+  return best;
+}
 function nextQ(){
   const g=G;if(!g||g.over)return;
   g.i++;
   if(g.list&&g.i>=g.list.length){endGame();return}
+  if(g.total&&g.i>=g.total){endGame();return}
   let q;
-  if(g.list)q=g.list[g.i];else{let t=0;do{q=genQ(g.cat,g.lvl,g.rng);t++}while(g.cur&&q.q===g.cur.q&&t<5)}
+  if(g.list)q=g.list[g.i];else q=pickQ(g)
   g.cur=q;g.input='';g.qms=0;g.shown=performance.now();
+  if(S.opts.penClear!==false)penClear();
   const el=$('#gq');
   if(q.kind==='frac'){const [a,b]=q.q.split('/');el.innerHTML='<span class="fr"><span>'+a+'</span><i></i><span>'+b+'</span></span>'}else el.textContent=q.q;
   const L=q.q.length;el.className='gq'+(L>14?' xs':L>10?' s':'');
-  $('#gpr').textContent=q.kind==='frac'?'ساده کن (مثلاً 2/3)':q.kind==='pct'?'':'';
-  $('#gsl').hidden=q.kind!=='frac';
+  $('#gpr').textContent=g.tech?'روش: '+techOf(g.tech).n:q.kind==='frac'?'ساده کن (مثلاً 2/3)':'';
+  const gs=$('#gsl');gs.hidden=!(q.kind==='frac'||q.kind==='dec');gs.textContent=q.kind==='dec'?'.':'/';
   paintAns();paintHud();
 }
 function paintAns(){const a=$('#ga');if(!a)return;a.textContent=G.input;a.classList.toggle('empty',!G.input)}
@@ -418,14 +653,15 @@ function paintHud(){
   const m=g.mode;let t,bar=1,low=false;
   if(m==='speed'){const rem=Math.max(0,SPEED_MS-g.run);t=mmss(Math.ceil(rem/1000)*1000);bar=rem/SPEED_MS;low=rem<10000}
   else if(m==='surv'){t=mmss(g.run);const lim=survLimit(g);bar=Math.max(0,1-g.qms/lim);low=bar<.3}
-  else{t=mmss(g.run);bar=m==='daily'||m==='review'?(g.list?Math.max(0,g.i)/g.list.length:0):0}
+  else if(m==='custom'){t=mmss(g.run);if(g.tpq){const lim=g.tpq*1000;bar=Math.max(0,1-g.qms/lim);low=bar<.3}else bar=g.total?Math.max(0,g.i)/g.total:0}
+  else{t=mmss(g.run);bar=m==='daily'||m==='review'||m==='tech'?(g.list?Math.max(0,g.i)/g.list.length:0):0}
   const te=$('#gt');if(te){te.textContent=t;te.classList.toggle('low',low)}
   const b=$('#gb');if(b)b.style.transform='scaleX('+Math.max(0,Math.min(1,bar))+')';
-  const gbw=$('#gbw');if(gbw)gbw.style.visibility=m==='free'?'hidden':'visible';
-  const gl=$('#gl');if(gl){gl.innerHTML=m==='surv'?[0,1,2].map(i=>'<span class="'+(i<g.lives?'':'off')+'">'+ic('heart')+'</span>').join(''):m==='free'?'<button class="pill soft" id="gend" style="height:38px;padding-inline:16px;font-size:13px">پایان</button>':''}
+  const gbw=$('#gbw');if(gbw)gbw.style.visibility=(m==='free'||(m==='custom'&&!g.tpq&&!g.total))?'hidden':'visible';
+  const gl=$('#gl');if(gl){gl.innerHTML=(m==='free'||(m==='custom'&&!g.total))?'<button class="pill soft" id="gend" style="height:38px;padding-inline:16px;font-size:13px">پایان</button>':m==='surv'?[0,1,2].map(i=>'<span class="'+(i<g.lives?'':'off')+'">'+ic('heart')+'</span>').join(''):m==='free'?'<button class="pill soft" id="gend" style="height:38px;padding-inline:16px;font-size:13px">پایان</button>':''}
   const m1=$('#gm1'),m2=$('#gm2');
   if(m1)m1.textContent='✓ '+g.score+(g.qs.length-g.score?'  ✗ '+(g.qs.length-g.score):'');
-  if(m2)m2.textContent=g.list?(Math.min(g.i+1,g.list.length))+' / '+g.list.length:'سطح '+g.lvl;
+  if(m2)m2.textContent=g.list?(Math.min(g.i+1,g.list.length))+' / '+g.list.length:g.total?(Math.min(g.i+1,g.total))+' / '+g.total:'سطح '+g.lvl;
 }
 const survLimit=g=>Math.max(6,16-g.lvl)*1000;
 function tick(){
@@ -434,6 +670,7 @@ function tick(){
   g.run+=dt;g.qms+=dt;
   if(g.mode==='speed'&&g.run>=SPEED_MS){endGame();return}
   if(g.mode==='surv'&&g.qms>=survLimit(g)){answer(true);return}
+  if(g.mode==='custom'&&g.tpq&&g.qms>=g.tpq*1000){answer(true);return}
   paintHud();
 }
 function press(k){
@@ -441,13 +678,15 @@ function press(k){
   if(k==='bs')g.input=g.input.slice(0,-1);
   else if(k==='go'){if(g.input)answer(false);return}
   else if(k==='/'){if(g.cur.kind==='frac'&&g.input&&!g.input.includes('/'))g.input+='/'}
+  else if(k==='.'){if(g.cur.kind==='dec'&&!g.input.includes('.'))g.input=(g.input||'0')+'.'}
   else if(g.input.length<9)g.input+=k;
   buzz(6);paintAns();
-  if(g.input===g.cur.a)answer(false);
+  if(same(g.input,g.cur))answer(false);
 }
+function same(u,q){if(u===q.a)return true;if(q.kind==='dec'&&/^\d+(\.\d+)?$/.test(u)&&/^\d+(\.\d+)?$/.test(q.a))return +u===+q.a;return false}
 function answer(timeout){
   const g=G,q=g.cur;if(!g||g.paused||g.over)return;
-  const ok=!timeout&&g.input===q.a,ms=Math.round(g.qms||(performance.now()-g.shown));
+  const ok=!timeout&&same(g.input,q),ms=Math.round(g.qms||(performance.now()-g.shown));
   g.qs.push({q:q.q,a:q.a,u:timeout?'':g.input,ok:ok,ms:ms,steps:q.steps,tip:q.tip,kind:q.kind,cat:q.c0||q.cat});
   S.tot.n++;S.tot.ms+=ms;if(ok)S.tot.c++;
   const cc=S.cat[q.c0||q.cat]=S.cat[q.c0||q.cat]||{n:0,c:0,ms:0};cc.n++;cc.ms+=ms;if(ok)cc.c++;
@@ -457,20 +696,20 @@ function answer(timeout){
     g.score++;S.xp+=3+g.lvl;buzz(10);beep(760,.09,'triangle');
     if(q.fromMiss||S.miss.some(m=>m.q===q.q))S.miss=S.miss.filter(m=>m.q!==q.q);
     const el=$('#gq');el.classList.add('ok');setTimeout(()=>{el&&el.classList.remove('ok')},160);
-    if(g.mode==='surv'||g.mode==='speed'||g.mode==='free'||g.list){setTimeout(()=>{if(G===g)nextQ()},110)}
+    if(g.mode==='surv'||g.mode==='speed'||g.mode==='free'||g.mode==='custom'||g.list){setTimeout(()=>{if(G===g)nextQ()},110)}
     paintHud();
   }else{
     buzz([30,40,30]);beep(190,.25,'sawtooth');
-    if(!S.miss.some(m=>m.q===q.q))S.miss.unshift({q:q.q,a:q.a,steps:q.steps,tip:q.tip,kind:q.kind,cat:q.c0||q.cat});S.miss=S.miss.slice(0,40);
+    if(!S.miss.some(m=>m.q===q.q))S.miss.unshift({q:q.q,a:q.a,steps:q.steps,tip:q.tip,kind:q.kind,cat:q.c0||q.cat,lvl:g.mode==='daily'||g.mode==='review'||g.tech?undefined:g.lvl});S.miss=S.miss.slice(0,40);
     if(g.mode==='surv')g.lives--;
     $('#ga').classList.add('sh');
     g.paused=true;showProc(q,timeout?'':g.input,timeout);
   }
 }
-function stepsHtml(st){return '<div class="steps">'+st.map((s,i)=>'<div dir="ltr" style="animation-delay:'+(i*260+120)+'ms">'+esc(s)+'</div>').join('')+'</div>'}
+function stepsHtml(st,force){const fa=force||st.some(s=>FA.test(s));return '<div class="steps">'+st.map((s,i)=>'<div dir="'+(fa?'rtl':'ltr')+'" style="animation-delay:'+(i*260+120)+'ms">'+bd(s)+'</div>').join('')+'</div>'}
 function showProc(q,u,timeout){
   const g=G;const d=document.createElement('div');d.className='proc';d.id='gp';
-  d.innerHTML='<div class="grab"><i></i></div><h3>'+ic('x')+(timeout?'وقت تموم شد':'جواب درست این بود')+'</h3><div class="ans" dir="ltr">'+(q.kind==='frac'?esc(q.a):esc(q.a))+'</div>'+(u?'<div class="you">جواب تو: <s>'+esc(u)+'</s></div>':'')+'<p class="tip">'+esc(q.tip||'')+'</p>'+stepsHtml(q.steps)+'<div class="acts"><button class="pill" id="gcont">ادامه</button></div>';
+  d.innerHTML='<div class="grab"><i></i></div><h3>'+ic('x')+(timeout?'وقت تموم شد':'جواب درست این بود')+'</h3><div class="ans" dir="ltr">'+(q.kind==='frac'?esc(q.a):esc(q.a))+'</div>'+(u?'<div class="you">جواب تو: <s>'+esc(u)+'</s></div>':'')+'<p class="tip">'+bd(q.tip||'')+'</p>'+stepsHtml(q.steps)+'<div class="acts"><button class="pill" id="gcont">ادامه</button></div>';
   $('#game').appendChild(d);
   $('#gcont').addEventListener('click',()=>contAfter());
 }
@@ -490,6 +729,7 @@ function endGame(){
       const k=g.cat+'|'+g.mode+'|'+g.lvl,b=S.best[k];if(!b||c>b.c||(c===b.c&&avg<b.avg)){S.best[k]={c:c,avg:Math.round(avg)};newBest=!!b||true}
       if(c>=10&&acc>=.8&&g.lvl<10&&unl(g.cat)===g.lvl&&!S.opts.all){S.unl[g.cat]=g.lvl+1;unlocked=g.lvl+1}
     }
+    if(g.mode==='tech'){const b=S.tech[g.tech];S.tech[g.tech]={best:Math.max(b?b.best:0,c),n:(b?b.n:0)+1}}
     if(g.mode==='daily'){const b=S.daily[dkey()];if(!b||c>b.c||(c===b.c&&g.run<b.ms))S.daily[dkey()]={c:c,ms:Math.round(g.run)}}
     S.sess.push({t:Date.now(),cat:g.cat,mode:g.mode,lvl:g.lvl,n:n,c:c,avg:Math.round(avg),dur:Math.round(g.run)});if(S.sess.length>200)S.sess.shift();
   }
@@ -497,7 +737,7 @@ function endGame(){
 }
 function showResults(g,r){
   const el=$('#game');
-  const title=g.mode==='daily'?'چالش روزانه':g.mode==='review'?'مرور اشتباه‌ها':catOf(g.cat).n+' · سطح '+g.lvl;
+  const title=g.mode==='custom'?(g.smart?'تمرین هوشمند':'تمرین سفارشی'):g.mode==='tech'?techOf(g.tech).n:g.mode==='daily'?'چالش روزانه':g.mode==='review'?'مرور اشتباه‌ها':catOf(g.cat).n+' · سطح '+g.lvl;
   el.innerHTML='<div class="gtop"><button class="rbtn glass" id="gx2" aria-label="بستن">'+ic('x')+'</button><div style="font-weight:600">'+esc(title)+'</div><span style="width:46px"></span></div><div class="res" id="rs">'+
    '<div class="glass hero aura"><div class="n">'+r.c+'</div><small>جواب درست از '+r.n+(g.mode==='speed'||g.list?'':' سؤال')+'</small></div>'+
    (r.unlocked?'<div class="unl">'+ic('star')+'سطح '+r.unlocked+' باز شد</div>':'')+
@@ -505,9 +745,9 @@ function showResults(g,r){
    (r.n?'<div class="sec">سؤال‌ها (برای دیدن روش حل بزن)</div>'+g.qs.map((q,i)=>'<button class="qrow'+(q.ok?'':' w')+'" data-qi="'+i+'"><span class="d"></span><code>'+esc(q.q)+' = '+esc(q.ok?q.a:q.a)+'</code><small>'+sec(q.ms)+'s</small></button>').join(''):'')+
    '</div><div class="acts" style="margin-top:10px">'+(g.mode==='review'?'':'<button class="pill" id="gre">'+ic('redo',2.2)+'دوباره</button>')+'<button class="pill soft" id="ghome">خانه</button></div>';
   $('#gx2').onclick=()=>exitGame();$('#ghome').onclick=()=>exitGame();
-  const re=$('#gre');if(re)re.onclick=()=>{const o={cat:g.cat,mode:g.mode,lvl:g.lvl};startGame(g.mode==='daily'?{cat:'mix',mode:'daily'}:o)};
+  const re=$('#gre');if(re)re.onclick=()=>{const o={cat:g.cat,mode:g.mode,lvl:g.lvl,tech:g.tech,opts:g.opts,smart:g.smart};startGame(g.mode==='daily'?{cat:'mix',mode:'daily'}:o)};
   $('#rs').addEventListener('click',e=>{const b=e.target.closest('[data-qi]');if(!b)return;const q=g.qs[+b.dataset.qi];
-    openSheet('<h2 dir="ltr" style="text-align:start">'+esc(q.q)+'</h2><div class="frm"><div class="ans" dir="ltr" style="font-size:40px;font-weight:700;color:var(--accent)">'+esc(q.a)+'</div>'+(q.u&&!q.ok?'<div class="you" dir="ltr" style="color:var(--muted)">جواب تو: <s style="color:var(--bad)">'+esc(q.u)+'</s></div>':'')+'<p class="tip">'+esc(q.tip||'')+'</p>'+stepsHtml(q.steps)+'</div>')});
+    openSheet('<h2 dir="ltr" style="text-align:start">'+esc(q.q)+'</h2><div class="frm"><div class="ans" dir="ltr" style="font-size:40px;font-weight:700;color:var(--accent)">'+esc(q.a)+'</div>'+(q.u&&!q.ok?'<div class="you" dir="ltr" style="color:var(--muted)">جواب تو: <s style="color:var(--bad)">'+esc(q.u)+'</s></div>':'')+'<p class="tip">'+bd(q.tip||'')+'</p>'+stepsHtml(q.steps)+'</div>')});
 }
 function exitGame(){
   const g=G;if(g){clearInterval(g.tm)}G=null;$('#game').hidden=true;$('#game').innerHTML='';$('.dock').style.visibility='';
@@ -530,8 +770,12 @@ document.addEventListener('click',e=>{
   if(b.id==='gx'){confirmExit();return}
   if(b.id==='gend'){if(G&&G.qs.length)endGame();else exitGame();return}
   if(ds.k!=null){press(ds.k);return}
-  if(b.id==='gsl'){press('/');return}
+  if(b.id==='gsl'){press(G&&G.cur&&G.cur.kind==='dec'?'.':'/');return}
   if(ds.tab){if(ds.tab!==tab){tab=ds.tab;render(true);window.scrollTo({top:0})}return}
+  if(ds.smart){startSmart();return}
+  if(ds.custom){customSheet();return}
+  if(ds.tech){lessonSheet(ds.tech);return}
+  if(ds.practice){const id=ds.practice;closeSheet(()=>startGame({cat:'mix',mode:'tech',tech:id}));return}
   if(ds.cat){setupSheet(ds.cat);return}
   if(ds.daily){startGame({cat:'mix',mode:'daily'});return}
   if(ds.quick&&S.last){startGame({cat:S.last.cat,mode:S.last.mode,lvl:Math.min(S.last.lvl,unl(S.last.cat))});return}
@@ -542,7 +786,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{
   if(G&&G.state==='play'&&!G.over){
     if(/^[0-9]$/.test(e.key)){if(G.paused&&$('#gp')){return}press(e.key)}
-    else if(e.key==='Backspace')press('bs');else if(e.key==='/')press('/');
+    else if(e.key==='Backspace')press('bs');else if(e.key==='/')press('/');else if(e.key==='.')press('.');
     else if(e.key==='Enter'){if($('#gp'))contAfter();else press('go')}
   }
 });
